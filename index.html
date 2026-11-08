@@ -84,10 +84,29 @@
       margin: 20px 0;
       font-weight: 700;
     }
+    .time-box {
+      text-align: center;
+      font-size: 1.1rem;
+      margin-bottom: 20px;
+      color: #374151;
+    }
     .result-buttons { display: flex; gap: 10px; }
     .result-buttons button { flex: 1; }
     .secondary { background: #6b7280; }
     .secondary:hover { background: #4b5563; }
+    .review-list {
+      margin-top: 20px;
+    }
+    .review-item {
+      padding: 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      background: #f9fafb;
+    }
+    .review-item:hover { background: #f3f4f6; }
+    .review-item .num { font-weight: 600; margin-right: 8px; }
   </style>
 </head>
 <body>
@@ -115,17 +134,29 @@
     <div id="result-screen" class="hidden">
       <h1>결과</h1>
       <div class="score-box" id="final-score"></div>
+      <div class="time-box" id="time-left"></div>
       <div class="result-buttons">
         <button onclick="restartQuiz()">다시 풀기</button>
         <button class="secondary" onclick="logout()">나가기</button>
       </div>
+      <div class="review-list" id="review-list"></div>
+    </div>
+
+    <div id="review-screen" class="hidden">
+      <div class="info-bar">
+        <span id="review-progress"></span>
+        <button onclick="backToResult()" style="width:auto; padding:8px 16px; margin:0;">목록으로</button>
+      </div>
+      <div class="question" id="review-question"></div>
+      <div class="options" id="review-options"></div>
+      <div id="review-explanation" class="explanation"></div>
     </div>
   </div>
 
   <script>
     const PASSWORD = "0305";
     const TOTAL_QUESTIONS = 20;
-    const TIME_LIMIT = 20 * 60; // 20분
+    const TIME_LIMIT = 20 * 60;
 
     const allQuestions = [
       {
@@ -256,6 +287,7 @@
     let timerInterval = null;
     let timeLeft = TIME_LIMIT;
     let answered = false;
+    let isReviewing = false;
 
     function checkPassword() {
       const input = document.getElementById("password").value;
@@ -282,11 +314,9 @@
     }
 
     function startQuiz() {
-      // 문제 랜덤 선택 및 셔플
       const shuffled = shuffle(allQuestions);
       questions = shuffled.slice(0, TOTAL_QUESTIONS);
       
-      // 각 문제의 보기도 셔플하고 정답 인덱스 재계산
       questions = questions.map(q => {
         const optionsWithIndex = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.answer }));
         const shuffledOpts = shuffle(optionsWithIndex);
@@ -302,6 +332,7 @@
       currentIndex = 0;
       score = 0;
       timeLeft = TIME_LIMIT;
+      isReviewing = false;
       startTimer();
       showQuestion();
     }
@@ -314,9 +345,13 @@
         updateTimerDisplay();
         if (timeLeft <= 0) {
           clearInterval(timerInterval);
-          finishQuiz(true); // 시간 초과
+          finishQuiz(true);
         }
       }, 1000);
+    }
+
+    function pauseTimer() {
+      clearInterval(timerInterval);
     }
 
     function updateTimerDisplay() {
@@ -353,6 +388,7 @@
     function selectAnswer(selected) {
       if (answered) return;
       answered = true;
+      pauseTimer();
 
       const q = questions[currentIndex];
       const options = document.querySelectorAll(".option");
@@ -377,6 +413,7 @@
     function nextQuestion() {
       currentIndex++;
       if (currentIndex < TOTAL_QUESTIONS) {
+        startTimer();
         showQuestion();
       } else {
         finishQuiz(false);
@@ -384,31 +421,69 @@
     }
 
     function finishQuiz(timeOver) {
-      clearInterval(timerInterval);
+      pauseTimer();
       document.getElementById("quiz-screen").classList.add("hidden");
       document.getElementById("result-screen").classList.remove("hidden");
       
-      let finalScore = score;
-      if (timeOver) {
-        // 시간 초과 시 남은 문제는 오답 처리 (이미 점수에 반영 안 됨)
-        finalScore = score;
-      }
-      
-      const percent = Math.round((finalScore / TOTAL_QUESTIONS) * 100);
-      let msg = `${finalScore} / ${TOTAL_QUESTIONS} (${percent}점)`;
-      if (timeOver) msg += "\n\n시간 초과로 종료되었습니다.";
-      document.getElementById("final-score").innerHTML = msg.replace(/\n/g, "<br>");
+      const percent = Math.round((score / TOTAL_QUESTIONS) * 100);
+      let msg = `${score} / ${TOTAL_QUESTIONS} (${percent}점)`;
+      if (timeOver) msg += "<br><br>시간 초과로 종료되었습니다.";
+      document.getElementById("final-score").innerHTML = msg;
+
+      const min = Math.floor(timeLeft / 60);
+      const sec = timeLeft % 60;
+      document.getElementById("time-left").textContent = `남은 시간: ${min.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+
+      const reviewList = document.getElementById("review-list");
+      reviewList.innerHTML = "";
+      questions.forEach((q, idx) => {
+        const item = document.createElement("div");
+        item.className = "review-item";
+        const correctOpt = q.options[q.answer];
+        item.innerHTML = `<span class="num">${idx+1}.</span> ${correctOpt}`;
+        item.onclick = () => showReview(idx);
+        reviewList.appendChild(item);
+      });
+    }
+
+    function showReview(idx) {
+      isReviewing = true;
+      document.getElementById("result-screen").classList.add("hidden");
+      document.getElementById("review-screen").classList.remove("hidden");
+
+      const q = questions[idx];
+      document.getElementById("review-progress").textContent = `${idx+1} / ${TOTAL_QUESTIONS}`;
+      document.getElementById("review-question").innerHTML = q.question.replace(/\n/g, "<br>");
+
+      const optionsDiv = document.getElementById("review-options");
+      optionsDiv.innerHTML = "";
+      q.options.forEach((opt, i) => {
+        const div = document.createElement("div");
+        div.className = "option disabled";
+        div.textContent = `${["①","②","③","④","⑤"][i]} ${opt}`;
+        if (i === q.answer) div.classList.add("correct");
+        optionsDiv.appendChild(div);
+      });
+
+      document.getElementById("review-explanation").textContent = q.explanation;
+    }
+
+    function backToResult() {
+      document.getElementById("review-screen").classList.add("hidden");
+      document.getElementById("result-screen").classList.remove("hidden");
     }
 
     function restartQuiz() {
       document.getElementById("result-screen").classList.add("hidden");
+      document.getElementById("review-screen").classList.add("hidden");
       document.getElementById("quiz-screen").classList.remove("hidden");
       startQuiz();
     }
 
     function logout() {
-      clearInterval(timerInterval);
+      pauseTimer();
       document.getElementById("result-screen").classList.add("hidden");
+      document.getElementById("review-screen").classList.add("hidden");
       document.getElementById("login-screen").classList.remove("hidden");
       document.getElementById("password").value = "";
       document.getElementById("error-msg").textContent = "";
