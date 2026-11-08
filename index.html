@@ -137,6 +137,25 @@
     .confirm-content p { margin-bottom: 16px; font-size: 1.05rem; }
     .confirm-buttons { display: flex; gap: 10px; }
     .confirm-buttons button { flex: 1; margin-top: 0; }
+    .countdown-screen {
+      text-align: center;
+      padding: 60px 0;
+    }
+    .countdown-text {
+      font-size: 5rem;
+      font-weight: 800;
+      color: #4f46e5;
+      margin-bottom: 30px;
+    }
+    .back-btn {
+      background: #6b7280;
+      width: auto;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      margin: 0 auto;
+      display: block;
+    }
+    .back-btn:hover { background: #4b5563; }
   </style>
 </head>
 <body>
@@ -154,28 +173,35 @@
       <div class="menu-section">
         <div class="menu-title">전범위</div>
         <div class="menu-buttons">
-          <button onclick="startQuiz('all', 20, 20)">20문제 (20분)</button>
-          <button onclick="startQuiz('all', 30, 30)">30문제 (30분)</button>
-          <button onclick="startQuiz('all', 50, 50)">50문제 (50분)</button>
-          <button onclick="startQuiz('all', 100, 100)">100문제 (100분)</button>
+          <button onclick="prepareQuiz('all', 20, 20)">20문제 (20분)</button>
+          <button onclick="prepareQuiz('all', 30, 30)">30문제 (30분)</button>
+          <button onclick="prepareQuiz('all', 50, 50)">50문제 (50분)</button>
+          <button onclick="prepareQuiz('all', 100, 100)">100문제 (100분)</button>
         </div>
       </div>
       <div class="menu-section">
         <div class="menu-title">시대별</div>
         <div class="menu-buttons">
-          <button onclick="startQuiz('ancient', 10, 10)">선사~고대 10문제</button>
-          <button onclick="startQuiz('ancient', 20, 20)">선사~고대 20문제</button>
-          <button onclick="startQuiz('goryeo', 10, 10)">고려 10문제</button>
-          <button onclick="startQuiz('goryeo', 20, 20)">고려 20문제</button>
-          <button onclick="startQuiz('joseon', 10, 10)">조선 10문제</button>
-          <button onclick="startQuiz('joseon', 20, 20)">조선 20문제</button>
-          <button onclick="startQuiz('modern', 10, 10)">근대 10문제</button>
-          <button onclick="startQuiz('modern', 20, 20)">근대 20문제</button>
-          <button onclick="startQuiz('contemporary', 10, 10)">현대 10문제</button>
-          <button onclick="startQuiz('contemporary', 20, 20)">현대 20문제</button>
+          <button onclick="prepareQuiz('ancient', 10, 10)">선사~고대 10문제</button>
+          <button onclick="prepareQuiz('ancient', 20, 20)">선사~고대 20문제</button>
+          <button onclick="prepareQuiz('goryeo', 10, 10)">고려 10문제</button>
+          <button onclick="prepareQuiz('goryeo', 20, 20)">고려 20문제</button>
+          <button onclick="prepareQuiz('joseon', 10, 10)">조선 10문제</button>
+          <button onclick="prepareQuiz('joseon', 20, 20)">조선 20문제</button>
+          <button onclick="prepareQuiz('modern', 10, 10)">근대 10문제</button>
+          <button onclick="prepareQuiz('modern', 20, 20)">근대 20문제</button>
+          <button onclick="prepareQuiz('contemporary', 10, 10)">현대 10문제</button>
+          <button onclick="prepareQuiz('contemporary', 20, 20)">현대 20문제</button>
         </div>
       </div>
       <button class="secondary" onclick="logout()">나가기</button>
+    </div>
+
+    <div id="countdown-screen" class="hidden">
+      <div class="countdown-screen">
+        <div class="countdown-text" id="countdown-num">3</div>
+        <button class="back-btn" onclick="cancelCountdown()">돌아가기</button>
+      </div>
     </div>
 
     <div id="quiz-screen" class="hidden">
@@ -224,7 +250,7 @@
   </div>
 
   <script>
-    const PASSWORD = "0305";
+    const PASSWORD = "1119";
 
     const questionBank = {
       ancient: [
@@ -235,7 +261,6 @@
         {question: "○○은 마한의 여러 소국을 복속하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["웅진에서 사비로 천도하였다.", "태학을 설립하였다.", "골품제를 운영하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다."], answer: 0, explanation: "정답: ① 웅진에서 사비로 천도하였다.\n이유: 마한 복속과 사비 천도는 모두 백제의 사실이다.\n② 고구려, ③ 신라, ④ 발해, ⑤ 고려의 사실이다."},
         {question: "△△은 골품제를 운영하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["태학을 설립하였다.", "지방을 9주 5소경 체제로 정비하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다.", "노비안검법을 실시하였다."], answer: 1, explanation: "정답: ② 지방을 9주 5소경 체제로 정비하였다.\n이유: 골품제와 9주 5소경은 모두 신라의 사실이다.\n① 고구려, ③ 발해, ④⑤ 고려의 사실이다."},
         {question: "○○은 5경 15부 62주를 설치하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["간석기를 제작하였다.", "주자감을 설립하였다.", "마한의 여러 소국을 복속하였다.", "비파형 동검을 제작하였다.", "8조법을 시행하였다."], answer: 1, explanation: "정답: ② 주자감을 설립하였다.\n이유: 5경 15부 62주와 주자감은 모두 발해의 사실이다.\n① 신석기, ③ 백제, ④ 청동기, ⑤ 고조선의 사실이다."}
-        // ... (여기에 더 많은 문제 추가 가능. 현재 샘플로 40+ 구성)
       ],
       goryeo: [
         {question: "△△은 훈요 10조를 남겼다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["고려를 건국하였다.", "노비안검법을 실시하였다.", "전민변정도감을 설치하였다.", "경국대전을 완성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 고려를 건국하였다.\n이유: 훈요 10조와 고려 건국은 모두 태조 왕건의 사실이다.\n②③ 고려의 다른 시기, ④⑤ 조선의 사실이다."},
@@ -265,7 +290,6 @@
       ]
     };
 
-    // 문제 수를 늘리기 위해 각 시대 문제를 복제하여 40개 이상으로 만듦 (실제 사용 시 더 다양한 문제로 교체 권장)
     function expandBank() {
       for (let key in questionBank) {
         while (questionBank[key].length < 40) {
@@ -283,6 +307,8 @@
     let totalQuestions = 20;
     let answered = false;
     let answeredCount = 0;
+    let countdownInterval = null;
+    let pendingQuiz = null;
 
     function checkPassword() {
       const input = document.getElementById("password").value;
@@ -305,6 +331,30 @@
         [arr[i], arr[j]] = [arr[j], arr[i]];
       }
       return arr;
+    }
+
+    function prepareQuiz(category, count, minutes) {
+      pendingQuiz = { category, count, minutes };
+      document.getElementById("menu-screen").classList.add("hidden");
+      document.getElementById("countdown-screen").classList.remove("hidden");
+      let countNum = 3;
+      document.getElementById("countdown-num").textContent = countNum;
+      countdownInterval = setInterval(() => {
+        countNum--;
+        if (countNum > 0) {
+          document.getElementById("countdown-num").textContent = countNum;
+        } else {
+          clearInterval(countdownInterval);
+          document.getElementById("countdown-screen").classList.add("hidden");
+          startQuiz(pendingQuiz.category, pendingQuiz.count, pendingQuiz.minutes);
+        }
+      }, 1000);
+    }
+
+    function cancelCountdown() {
+      clearInterval(countdownInterval);
+      document.getElementById("countdown-screen").classList.add("hidden");
+      document.getElementById("menu-screen").classList.remove("hidden");
     }
 
     function startQuiz(category, count, minutes) {
@@ -337,7 +387,6 @@
         };
       });
 
-      document.getElementById("menu-screen").classList.add("hidden");
       document.getElementById("quiz-screen").classList.remove("hidden");
       startTimer();
       showQuestion();
@@ -505,9 +554,11 @@
 
     function logout() {
       pauseTimer();
+      clearInterval(countdownInterval);
       document.getElementById("result-screen").classList.add("hidden");
       document.getElementById("review-screen").classList.add("hidden");
       document.getElementById("menu-screen").classList.add("hidden");
+      document.getElementById("countdown-screen").classList.add("hidden");
       document.getElementById("login-screen").classList.remove("hidden");
       document.getElementById("password").value = "";
       document.getElementById("error-msg").textContent = "";
