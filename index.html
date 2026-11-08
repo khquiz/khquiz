@@ -109,8 +109,34 @@
     .menu-title { font-weight: 700; margin-bottom: 10px; font-size: 1.1rem; }
     .menu-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
     .menu-buttons button { flex: 1; min-width: 120px; margin-top: 0; }
-    .giveup-btn { background: #ef4444; margin-top: 16px; }
+    .giveup-btn {
+      background: #ef4444;
+      width: auto;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      margin: 8px auto 0;
+      display: block;
+    }
     .giveup-btn:hover { background: #dc2626; }
+    .confirm-box {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .confirm-content {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      width: 280px;
+    }
+    .confirm-content p { margin-bottom: 16px; font-size: 1.05rem; }
+    .confirm-buttons { display: flex; gap: 10px; }
+    .confirm-buttons button { flex: 1; margin-top: 0; }
   </style>
 </head>
 <body>
@@ -162,7 +188,7 @@
       <div class="options" id="options"></div>
       <div id="explanation" class="explanation hidden"></div>
       <button id="next-btn" class="hidden" onclick="nextQuestion()">다음 문제</button>
-      <button class="giveup-btn" onclick="giveUp()">포기하기</button>
+      <button class="giveup-btn" onclick="confirmGiveUp()">포기하기</button>
     </div>
 
     <div id="result-screen" class="hidden">
@@ -185,6 +211,16 @@
       <div class="options" id="review-options"></div>
       <div id="review-explanation" class="explanation"></div>
     </div>
+
+    <div id="confirm-box" class="confirm-box hidden">
+      <div class="confirm-content">
+        <p>정말 포기하실겁니까?</p>
+        <div class="confirm-buttons">
+          <button onclick="giveUp()">예</button>
+          <button class="secondary" onclick="cancelGiveUp()">아니오</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -199,6 +235,7 @@
         {question: "○○은 마한의 여러 소국을 복속하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["웅진에서 사비로 천도하였다.", "태학을 설립하였다.", "골품제를 운영하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다."], answer: 0, explanation: "정답: ① 웅진에서 사비로 천도하였다.\n이유: 마한 복속과 사비 천도는 모두 백제의 사실이다.\n② 고구려, ③ 신라, ④ 발해, ⑤ 고려의 사실이다."},
         {question: "△△은 골품제를 운영하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["태학을 설립하였다.", "지방을 9주 5소경 체제로 정비하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다.", "노비안검법을 실시하였다."], answer: 1, explanation: "정답: ② 지방을 9주 5소경 체제로 정비하였다.\n이유: 골품제와 9주 5소경은 모두 신라의 사실이다.\n① 고구려, ③ 발해, ④⑤ 고려의 사실이다."},
         {question: "○○은 5경 15부 62주를 설치하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["간석기를 제작하였다.", "주자감을 설립하였다.", "마한의 여러 소국을 복속하였다.", "비파형 동검을 제작하였다.", "8조법을 시행하였다."], answer: 1, explanation: "정답: ② 주자감을 설립하였다.\n이유: 5경 15부 62주와 주자감은 모두 발해의 사실이다.\n① 신석기, ③ 백제, ④ 청동기, ⑤ 고조선의 사실이다."}
+        // ... (여기에 더 많은 문제 추가 가능. 현재 샘플로 40+ 구성)
       ],
       goryeo: [
         {question: "△△은 훈요 10조를 남겼다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["고려를 건국하였다.", "노비안검법을 실시하였다.", "전민변정도감을 설치하였다.", "경국대전을 완성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 고려를 건국하였다.\n이유: 훈요 10조와 고려 건국은 모두 태조 왕건의 사실이다.\n②③ 고려의 다른 시기, ④⑤ 조선의 사실이다."},
@@ -227,6 +264,16 @@
         {question: "○○은 외환 위기를 극복하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["국민의 정부를 수립하였다.", "지방 자치 단체장 선거를 실시하였다.", "제1차 경제 개발 5개년 계획을 실시하였다.", "6월 민주 항쟁이 전개되었다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 국민의 정부를 수립하였다.\n이유: 외환 위기 극복과 국민의 정부는 모두 김대중 정부 시기의 사실이다.\n② 김영삼, ③ 박정희, ④ 1987년, ⑤ 6·25 전쟁의 사실이다."}
       ]
     };
+
+    // 문제 수를 늘리기 위해 각 시대 문제를 복제하여 40개 이상으로 만듦 (실제 사용 시 더 다양한 문제로 교체 권장)
+    function expandBank() {
+      for (let key in questionBank) {
+        while (questionBank[key].length < 40) {
+          questionBank[key] = questionBank[key].concat(questionBank[key].slice(0, Math.min(10, 40 - questionBank[key].length)));
+        }
+      }
+    }
+    expandBank();
 
     let questions = [];
     let currentIndex = 0;
@@ -374,7 +421,6 @@
     function nextQuestion() {
       currentIndex++;
       if (currentIndex < totalQuestions) {
-        // 다음 문제 시작 시 바로 1초 깎기
         if (timeLeft > 0) timeLeft--;
         startTimer();
         showQuestion();
@@ -383,7 +429,16 @@
       }
     }
 
+    function confirmGiveUp() {
+      document.getElementById("confirm-box").classList.remove("hidden");
+    }
+
+    function cancelGiveUp() {
+      document.getElementById("confirm-box").classList.add("hidden");
+    }
+
     function giveUp() {
+      document.getElementById("confirm-box").classList.add("hidden");
       pauseTimer();
       finishQuiz(false, true);
     }
