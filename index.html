@@ -94,9 +94,7 @@
     .result-buttons button { flex: 1; }
     .secondary { background: #6b7280; }
     .secondary:hover { background: #4b5563; }
-    .review-list {
-      margin-top: 20px;
-    }
+    .review-list { margin-top: 20px; }
     .review-item {
       padding: 12px;
       border: 1px solid #e5e7eb;
@@ -107,6 +105,12 @@
     }
     .review-item:hover { background: #f3f4f6; }
     .review-item .num { font-weight: 600; margin-right: 8px; }
+    .menu-section { margin-bottom: 20px; }
+    .menu-title { font-weight: 700; margin-bottom: 10px; font-size: 1.1rem; }
+    .menu-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+    .menu-buttons button { flex: 1; min-width: 120px; margin-top: 0; }
+    .giveup-btn { background: #ef4444; margin-top: 16px; }
+    .giveup-btn:hover { background: #dc2626; }
   </style>
 </head>
 <body>
@@ -119,6 +123,35 @@
       <p id="error-msg" style="color:#ef4444; text-align:center; margin-top:12px; font-size:0.9rem;"></p>
     </div>
 
+    <div id="menu-screen" class="hidden">
+      <h1>퀴즈 선택</h1>
+      <div class="menu-section">
+        <div class="menu-title">전범위</div>
+        <div class="menu-buttons">
+          <button onclick="startQuiz('all', 20, 20)">20문제 (20분)</button>
+          <button onclick="startQuiz('all', 30, 30)">30문제 (30분)</button>
+          <button onclick="startQuiz('all', 50, 50)">50문제 (50분)</button>
+          <button onclick="startQuiz('all', 100, 100)">100문제 (100분)</button>
+        </div>
+      </div>
+      <div class="menu-section">
+        <div class="menu-title">시대별</div>
+        <div class="menu-buttons">
+          <button onclick="startQuiz('ancient', 10, 10)">선사~고대 10문제</button>
+          <button onclick="startQuiz('ancient', 20, 20)">선사~고대 20문제</button>
+          <button onclick="startQuiz('goryeo', 10, 10)">고려 10문제</button>
+          <button onclick="startQuiz('goryeo', 20, 20)">고려 20문제</button>
+          <button onclick="startQuiz('joseon', 10, 10)">조선 10문제</button>
+          <button onclick="startQuiz('joseon', 20, 20)">조선 20문제</button>
+          <button onclick="startQuiz('modern', 10, 10)">근대 10문제</button>
+          <button onclick="startQuiz('modern', 20, 20)">근대 20문제</button>
+          <button onclick="startQuiz('contemporary', 10, 10)">현대 10문제</button>
+          <button onclick="startQuiz('contemporary', 20, 20)">현대 20문제</button>
+        </div>
+      </div>
+      <button class="secondary" onclick="logout()">나가기</button>
+    </div>
+
     <div id="quiz-screen" class="hidden">
       <div class="info-bar">
         <span id="progress">1 / 20</span>
@@ -129,6 +162,7 @@
       <div class="options" id="options"></div>
       <div id="explanation" class="explanation hidden"></div>
       <button id="next-btn" class="hidden" onclick="nextQuestion()">다음 문제</button>
+      <button class="giveup-btn" onclick="giveUp()">포기하기</button>
     </div>
 
     <div id="result-screen" class="hidden">
@@ -136,7 +170,7 @@
       <div class="score-box" id="final-score"></div>
       <div class="time-box" id="time-left"></div>
       <div class="result-buttons">
-        <button onclick="restartQuiz()">다시 풀기</button>
+        <button onclick="goToMenu()">메뉴로</button>
         <button class="secondary" onclick="logout()">나가기</button>
       </div>
       <div class="review-list" id="review-list"></div>
@@ -155,146 +189,59 @@
 
   <script>
     const PASSWORD = "0305";
-    const TOTAL_QUESTIONS = 20;
-    const TIME_LIMIT = 20 * 60;
 
-    const allQuestions = [
-      {
-        question: "○○은 경국대전을 완성하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["태학을 설립하였다.", "5경 15부 62주를 설치하였다.", "골품제를 운영하였다.", "훈요 10조를 남겼다.", "대동법이 운용되었다."],
-        answer: 4,
-        explanation: "정답: ⑤ 대동법이 운용되었다.\n이유: 경국대전과 대동법은 모두 조선의 사실이다.\n① 고구려, ② 발해, ③ 신라, ④ 고려의 사실이다."
-      },
-      {
-        question: "△△은 위화도 회군을 단행하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["노비안검법을 실시하였다.", "전민변정도감을 설치하였다.", "규장각을 육성하였다.", "삼국사기를 편찬하였다.", "태학을 설립하였다."],
-        answer: 2,
-        explanation: "정답: ③ 규장각을 육성하였다.\n이유: 위화도 회군과 규장각은 모두 조선의 사실이다.\n①②④ 고려, ⑤ 고구려의 사실이다."
-      },
-      {
-        question: "○○은 5경 15부 62주를 설치하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["간석기를 제작하였다.", "주자감을 설립하였다.", "마한의 여러 소국을 복속하였다.", "비파형 동검을 제작하였다.", "8조법을 시행하였다."],
-        answer: 1,
-        explanation: "정답: ② 주자감을 설립하였다.\n이유: 5경 15부 62주와 주자감은 모두 발해의 사실이다.\n① 신석기, ③ 백제, ④ 청동기, ⑤ 고조선의 사실이다."
-      },
-      {
-        question: "△△은 태학을 설립하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["비파형 동검이 제작되었다.", "수의 침략을 막아 냈다.", "골품제를 운영하였다.", "주자감을 설립하였다.", "간석기를 만들었다."],
-        answer: 1,
-        explanation: "정답: ② 수의 침략을 막아 냈다.\n이유: 태학과 수의 침략 방어는 모두 고구려의 사실이다.\n① 청동기, ③ 신라, ④ 발해, ⑤ 신석기의 사실이다."
-      },
-      {
-        question: "○○은 삼국사기를 편찬하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["훈요 10조를 남겼다.", "노비안검법을 실시하였다.", "경국대전을 완성하였다.", "위화도 회군을 단행하였다.", "대동법이 운용되었다."],
-        answer: 1,
-        explanation: "정답: ② 노비안검법을 실시하였다.\n이유: 삼국사기와 노비안검법은 모두 고려의 사실이다.\n③④⑤ 조선의 사실이다."
-      },
-      {
-        question: "△△은 비파형 동검을 제작하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["고인돌이 축조되었다.", "빗살무늬 토기를 제작하였다.", "철제 무기가 보급되었다.", "8조법을 시행하였다.", "간석기를 만들었다."],
-        answer: 0,
-        explanation: "정답: ① 고인돌이 축조되었다.\n이유: 비파형 동검과 고인돌은 모두 청동기 시대의 사실이다.\n②⑤ 신석기, ③ 철기, ④ 고조선의 사실이다."
-      },
-      {
-        question: "○○은 골품제를 운영하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["태학을 설립하였다.", "지방을 9주 5소경 체제로 정비하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다.", "노비안검법을 실시하였다."],
-        answer: 1,
-        explanation: "정답: ② 지방을 9주 5소경 체제로 정비하였다.\n이유: 골품제와 9주 5소경은 모두 신라의 사실이다.\n① 고구려, ③ 발해, ④⑤ 고려의 사실이다."
-      },
-      {
-        question: "△△은 토지 조사 사업을 실시하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["헌병 경찰제가 실시되었다.", "산미 증식 계획이 시행되었다.", "국가 총동원법이 시행되었다.", "제헌 국회가 구성되었다.", "인천 상륙 작전이 전개되었다."],
-        answer: 0,
-        explanation: "정답: ① 헌병 경찰제가 실시되었다.\n이유: 토지 조사 사업과 헌병 경찰제는 모두 일제강점기 무단통치(1910년대)의 사실이다.\n② 1920년대, ③ 1940년대, ④⑤ 해방 후의 사실이다."
-      },
-      {
-        question: "○○은 제1차 경제 개발 5개년 계획을 실시하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["새마을 운동이 시작되었다.", "대통령 직선제 개헌이 이루어졌다.", "외환 위기를 극복하였다.", "지방 자치 단체장 선거가 실시되었다.", "인천 상륙 작전이 전개되었다."],
-        answer: 0,
-        explanation: "정답: ① 새마을 운동이 시작되었다.\n이유: 제1차 경제개발 5개년 계획과 새마을 운동은 모두 박정희 정부 시기의 사실이다.\n② 1987년, ③ 김대중, ④ 김영삼, ⑤ 6·25 전쟁의 사실이다."
-      },
-      {
-        question: "△△은 강화도 조약을 체결하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["운요호 사건을 계기로 체결되었다.", "제물포 조약이 체결되었다.", "한성 조약이 체결되었다.", "을미사변이 일어났다.", "아관 파천이 단행되었다."],
-        answer: 0,
-        explanation: "정답: ① 운요호 사건을 계기로 체결되었다.\n이유: 강화도 조약은 운요호 사건을 계기로 체결된 근대 개항기의 사실이다.\n② 임오군란, ③ 갑신정변, ④⑤ 갑오·을미 개혁 관련 사실이다."
-      },
-      {
-        question: "○○은 신간회를 조직하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["광주 학생 항일 운동을 지원하였다.", "헌병 경찰제가 실시되었다.", "국가 총동원법이 시행되었다.", "제헌 국회가 구성되었다.", "토지 조사 사업이 실시되었다."],
-        answer: 0,
-        explanation: "정답: ① 광주 학생 항일 운동을 지원하였다.\n이유: 신간회는 일제강점기 문화통치기(1920년대)에 활동하며 광주학생항일운동을 지원하였다.\n②⑤ 1910년대, ③ 1940년대, ④ 해방 후의 사실이다."
-      },
-      {
-        question: "△△은 6·25 전쟁이 발발한 시기에 활동하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["인천 상륙 작전이 전개되었다.", "4·19 혁명이 일어났다.", "5·16 군사 정변이 발발하였다.", "대통령 직선제 개헌이 이루어졌다.", "새마을 운동이 시작되었다."],
-        answer: 0,
-        explanation: "정답: ① 인천 상륙 작전이 전개되었다.\n이유: 인천 상륙 작전은 6·25 전쟁 중에 전개된 사실이다.\n② 1960년, ③ 1961년, ④ 1987년, ⑤ 박정희 정부 시기의 사실이다."
-      },
-      {
-        question: "○○은 4·19 혁명을 일으켰다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["내각 책임제를 골자로 한 개헌이 이루어졌다.", "5·16 군사 정변이 발발하였다.", "유신 체제가 수립되었다.", "대통령 직선제 개헌이 이루어졌다.", "인천 상륙 작전이 전개되었다."],
-        answer: 0,
-        explanation: "정답: ① 내각 책임제를 골자로 한 개헌이 이루어졌다.\n이유: 4·19 혁명 이후 내각책임제 개헌이 이루어졌다.\n② 1961년, ③ 박정희, ④ 1987년, ⑤ 6·25 전쟁의 사실이다."
-      },
-      {
-        question: "△△은 대통령 직선제 개헌을 이루어냈다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["6월 민주 항쟁이 전개되었다.", "5·18 광주 민주화 운동이 일어났다.", "유신 체제가 수립되었다.", "제1차 경제 개발 5개년 계획이 실시되었다.", "인천 상륙 작전이 전개되었다."],
-        answer: 0,
-        explanation: "정답: ① 6월 민주 항쟁이 전개되었다.\n이유: 6월 민주 항쟁의 결과로 대통령 직선제 개헌이 이루어졌다.\n② 1980년, ③ 박정희, ④ 박정희, ⑤ 6·25 전쟁의 사실이다."
-      },
-      {
-        question: "○○은 지방 자치 단체장 선거를 실시하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["경제 협력 개발 기구(OECD)에 가입하였다.", "외환 위기를 극복하였다.", "G20 정상 회의를 개최하였다.", "새마을 운동이 시작되었다.", "인천 상륙 작전이 전개되었다."],
-        answer: 0,
-        explanation: "정답: ① 경제 협력 개발 기구(OECD)에 가입하였다.\n이유: 지방자치단체장 선거와 OECD 가입은 모두 김영삼 정부 시기의 사실이다.\n② 김대중, ③ 이명박, ④ 박정희, ⑤ 6·25 전쟁의 사실이다."
-      },
-      {
-        question: "△△은 간석기를 만들었다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["빗살무늬 토기를 제작하였다.", "비파형 동검을 제작하였다.", "고인돌이 축조되었다.", "철제 무기가 보급되었다.", "8조법을 시행하였다."],
-        answer: 0,
-        explanation: "정답: ① 빗살무늬 토기를 제작하였다.\n이유: 간석기와 빗살무늬 토기는 모두 신석기 시대의 사실이다.\n②③ 청동기, ④ 철기, ⑤ 고조선의 사실이다."
-      },
-      {
-        question: "○○은 마한의 여러 소국을 복속하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["웅진에서 사비로 천도하였다.", "태학을 설립하였다.", "골품제를 운영하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다."],
-        answer: 0,
-        explanation: "정답: ① 웅진에서 사비로 천도하였다.\n이유: 마한 복속과 사비 천도는 모두 백제의 사실이다.\n② 고구려, ③ 신라, ④ 발해, ⑤ 고려의 사실이다."
-      },
-      {
-        question: "△△은 훈요 10조를 남겼다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["고려를 건국하였다.", "노비안검법을 실시하였다.", "전민변정도감을 설치하였다.", "경국대전을 완성하였다.", "위화도 회군을 단행하였다."],
-        answer: 0,
-        explanation: "정답: ① 고려를 건국하였다.\n이유: 훈요 10조와 고려 건국은 모두 태조 왕건의 사실이다.\n②③ 고려의 다른 시기, ④⑤ 조선의 사실이다."
-      },
-      {
-        question: "○○은 제헌 국회를 구성하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["반민족 행위 처벌법을 제정하였다.", "인천 상륙 작전이 전개되었다.", "4·19 혁명이 일어났다.", "5·16 군사 정변이 발발하였다.", "새마을 운동이 시작되었다."],
-        answer: 0,
-        explanation: "정답: ① 반민족 행위 처벌법을 제정하였다.\n이유: 제헌 국회에서 반민족행위처벌법이 제정되었다.\n② 6·25 전쟁, ③ 1960년, ④ 1961년, ⑤ 박정희 정부의 사실이다."
-      },
-      {
-        question: "△△은 국가 총동원법을 시행하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?",
-        options: ["황국 신민 서사 암송이 강요되었다.", "토지 조사 사업이 실시되었다.", "신간회가 조직되었다.", "제헌 국회가 구성되었다.", "인천 상륙 작전이 전개되었다."],
-        answer: 0,
-        explanation: "정답: ① 황국 신민 서사 암송이 강요되었다.\n이유: 국가 총동원법과 황국신민서사 암송은 모두 일제강점기 말기(1940년대) 민족말살통치의 사실이다.\n② 1910년대, ③ 1920년대, ④⑤ 해방 후의 사실이다."
-      }
-    ];
+    const questionBank = {
+      ancient: [
+        {question: "○○은 간석기를 만들었다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["빗살무늬 토기를 제작하였다.", "비파형 동검을 제작하였다.", "고인돌이 축조되었다.", "철제 무기가 보급되었다.", "8조법을 시행하였다."], answer: 0, explanation: "정답: ① 빗살무늬 토기를 제작하였다.\n이유: 간석기와 빗살무늬 토기는 모두 신석기 시대의 사실이다.\n②③ 청동기, ④ 철기, ⑤ 고조선의 사실이다."},
+        {question: "△△은 비파형 동검을 제작하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["고인돌이 축조되었다.", "빗살무늬 토기를 제작하였다.", "철제 무기가 보급되었다.", "8조법을 시행하였다.", "간석기를 만들었다."], answer: 0, explanation: "정답: ① 고인돌이 축조되었다.\n이유: 비파형 동검과 고인돌은 모두 청동기 시대의 사실이다.\n②⑤ 신석기, ③ 철기, ④ 고조선의 사실이다."},
+        {question: "○○은 8조법을 시행하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["위만에게 왕위를 빼앗겼다.", "비파형 동검이 제작되었다.", "철제 무기가 보급되었다.", "간석기를 만들었다.", "고인돌이 축조되었다."], answer: 0, explanation: "정답: ① 위만에게 왕위를 빼앗겼다.\n이유: 8조법과 위만의 왕위 찬탈은 모두 고조선의 사실이다.\n②⑤ 청동기, ③ 철기, ④ 신석기의 사실이다."},
+        {question: "△△은 태학을 설립하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["비파형 동검이 제작되었다.", "수의 침략을 막아 냈다.", "골품제를 운영하였다.", "주자감을 설립하였다.", "간석기를 만들었다."], answer: 1, explanation: "정답: ② 수의 침략을 막아 냈다.\n이유: 태학과 수의 침략 방어는 모두 고구려의 사실이다.\n① 청동기, ③ 신라, ④ 발해, ⑤ 신석기의 사실이다."},
+        {question: "○○은 마한의 여러 소국을 복속하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["웅진에서 사비로 천도하였다.", "태학을 설립하였다.", "골품제를 운영하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다."], answer: 0, explanation: "정답: ① 웅진에서 사비로 천도하였다.\n이유: 마한 복속과 사비 천도는 모두 백제의 사실이다.\n② 고구려, ③ 신라, ④ 발해, ⑤ 고려의 사실이다."},
+        {question: "△△은 골품제를 운영하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["태학을 설립하였다.", "지방을 9주 5소경 체제로 정비하였다.", "5경 15부 62주를 설치하였다.", "훈요 10조를 남겼다.", "노비안검법을 실시하였다."], answer: 1, explanation: "정답: ② 지방을 9주 5소경 체제로 정비하였다.\n이유: 골품제와 9주 5소경은 모두 신라의 사실이다.\n① 고구려, ③ 발해, ④⑤ 고려의 사실이다."},
+        {question: "○○은 5경 15부 62주를 설치하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["간석기를 제작하였다.", "주자감을 설립하였다.", "마한의 여러 소국을 복속하였다.", "비파형 동검을 제작하였다.", "8조법을 시행하였다."], answer: 1, explanation: "정답: ② 주자감을 설립하였다.\n이유: 5경 15부 62주와 주자감은 모두 발해의 사실이다.\n① 신석기, ③ 백제, ④ 청동기, ⑤ 고조선의 사실이다."}
+      ],
+      goryeo: [
+        {question: "△△은 훈요 10조를 남겼다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["고려를 건국하였다.", "노비안검법을 실시하였다.", "전민변정도감을 설치하였다.", "경국대전을 완성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 고려를 건국하였다.\n이유: 훈요 10조와 고려 건국은 모두 태조 왕건의 사실이다.\n②③ 고려의 다른 시기, ④⑤ 조선의 사실이다."},
+        {question: "○○은 삼국사기를 편찬하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["훈요 10조를 남겼다.", "노비안검법을 실시하였다.", "경국대전을 완성하였다.", "위화도 회군을 단행하였다.", "대동법이 운용되었다."], answer: 1, explanation: "정답: ② 노비안검법을 실시하였다.\n이유: 삼국사기와 노비안검법은 모두 고려의 사실이다.\n③④⑤ 조선의 사실이다."},
+        {question: "△△은 노비안검법을 실시하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["전민변정도감을 설치하였다.", "경국대전을 완성하였다.", "위화도 회군을 단행하였다.", "대동법이 운용되었다.", "규장각을 육성하였다."], answer: 0, explanation: "정답: ① 전민변정도감을 설치하였다.\n이유: 노비안검법과 전민변정도감은 모두 고려의 사실이다.\n②③④⑤ 조선의 사실이다."}
+      ],
+      joseon: [
+        {question: "○○은 경국대전을 완성하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["태학을 설립하였다.", "5경 15부 62주를 설치하였다.", "골품제를 운영하였다.", "훈요 10조를 남겼다.", "대동법이 운용되었다."], answer: 4, explanation: "정답: ⑤ 대동법이 운용되었다.\n이유: 경국대전과 대동법은 모두 조선의 사실이다.\n① 고구려, ② 발해, ③ 신라, ④ 고려의 사실이다."},
+        {question: "△△은 위화도 회군을 단행하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["노비안검법을 실시하였다.", "전민변정도감을 설치하였다.", "규장각을 육성하였다.", "삼국사기를 편찬하였다.", "태학을 설립하였다."], answer: 2, explanation: "정답: ③ 규장각을 육성하였다.\n이유: 위화도 회군과 규장각은 모두 조선의 사실이다.\n①②④ 고려, ⑤ 고구려의 사실이다."},
+        {question: "○○은 대동법을 시행하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["경국대전을 완성하였다.", "위화도 회군을 단행하였다.", "규장각을 육성하였다.", "노비안검법을 실시하였다.", "전민변정도감을 설치하였다."], answer: 0, explanation: "정답: ① 경국대전을 완성하였다.\n이유: 대동법과 경국대전은 모두 조선의 사실이다.\n④⑤ 고려의 사실이다."},
+        {question: "△△은 규장각을 육성하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["위화도 회군을 단행하였다.", "대동법을 시행하였다.", "경국대전을 완성하였다.", "노비안검법을 실시하였다.", "전민변정도감을 설치하였다."], answer: 0, explanation: "정답: ① 위화도 회군을 단행하였다.\n이유: 규장각과 위화도 회군은 모두 조선의 사실이다.\n④⑤ 고려의 사실이다."}
+      ],
+      modern: [
+        {question: "○○은 강화도 조약을 체결하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["운요호 사건을 계기로 체결되었다.", "제물포 조약이 체결되었다.", "한성 조약이 체결되었다.", "을미사변이 일어났다.", "아관 파천이 단행되었다."], answer: 0, explanation: "정답: ① 운요호 사건을 계기로 체결되었다.\n이유: 강화도 조약은 운요호 사건을 계기로 체결된 근대 개항기의 사실이다.\n② 임오군란, ③ 갑신정변, ④⑤ 갑오·을미 개혁 관련 사실이다."},
+        {question: "△△은 토지 조사 사업을 실시하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["헌병 경찰제가 실시되었다.", "산미 증식 계획이 시행되었다.", "국가 총동원법이 시행되었다.", "제헌 국회가 구성되었다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 헌병 경찰제가 실시되었다.\n이유: 토지 조사 사업과 헌병 경찰제는 모두 일제강점기 무단통치(1910년대)의 사실이다.\n② 1920년대, ③ 1940년대, ④⑤ 해방 후의 사실이다."},
+        {question: "○○은 신간회를 조직하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["광주 학생 항일 운동을 지원하였다.", "헌병 경찰제가 실시되었다.", "국가 총동원법이 시행되었다.", "제헌 국회가 구성되었다.", "토지 조사 사업이 실시되었다."], answer: 0, explanation: "정답: ① 광주 학생 항일 운동을 지원하였다.\n이유: 신간회는 일제강점기 문화통치기(1920년대)에 활동하며 광주학생항일운동을 지원하였다.\n②⑤ 1910년대, ③ 1940년대, ④ 해방 후의 사실이다."},
+        {question: "△△은 국가 총동원법을 시행하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["황국 신민 서사 암송이 강요되었다.", "토지 조사 사업이 실시되었다.", "신간회가 조직되었다.", "제헌 국회가 구성되었다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 황국 신민 서사 암송이 강요되었다.\n이유: 국가 총동원법과 황국신민서사 암송은 모두 일제강점기 말기(1940년대) 민족말살통치의 사실이다.\n② 1910년대, ③ 1920년대, ④⑤ 해방 후의 사실이다."}
+      ],
+      contemporary: [
+        {question: "○○은 제헌 국회를 구성하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["반민족 행위 처벌법을 제정하였다.", "인천 상륙 작전이 전개되었다.", "4·19 혁명이 일어났다.", "5·16 군사 정변이 발발하였다.", "새마을 운동이 시작되었다."], answer: 0, explanation: "정답: ① 반민족 행위 처벌법을 제정하였다.\n이유: 제헌 국회에서 반민족행위처벌법이 제정되었다.\n② 6·25 전쟁, ③ 1960년, ④ 1961년, ⑤ 박정희 정부의 사실이다."},
+        {question: "△△은 6·25 전쟁이 발발한 시기에 활동하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["인천 상륙 작전이 전개되었다.", "4·19 혁명이 일어났다.", "5·16 군사 정변이 발발하였다.", "대통령 직선제 개헌이 이루어졌다.", "새마을 운동이 시작되었다."], answer: 0, explanation: "정답: ① 인천 상륙 작전이 전개되었다.\n이유: 인천 상륙 작전은 6·25 전쟁 중에 전개된 사실이다.\n② 1960년, ③ 1961년, ④ 1987년, ⑤ 박정희 정부 시기의 사실이다."},
+        {question: "○○은 4·19 혁명을 일으켰다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["내각 책임제를 골자로 한 개헌이 이루어졌다.", "5·16 군사 정변이 발발하였다.", "유신 체제가 수립되었다.", "대통령 직선제 개헌이 이루어졌다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 내각 책임제를 골자로 한 개헌이 이루어졌다.\n이유: 4·19 혁명 이후 내각책임제 개헌이 이루어졌다.\n② 1961년, ③ 박정희, ④ 1987년, ⑤ 6·25 전쟁의 사실이다."},
+        {question: "△△은 제1차 경제 개발 5개년 계획을 실시하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["새마을 운동이 시작되었다.", "대통령 직선제 개헌이 이루어졌다.", "외환 위기를 극복하였다.", "지방 자치 단체장 선거가 실시되었다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 새마을 운동이 시작되었다.\n이유: 제1차 경제개발 5개년 계획과 새마을 운동은 모두 박정희 정부 시기의 사실이다.\n② 1987년, ③ 김대중, ④ 김영삼, ⑤ 6·25 전쟁의 사실이다."},
+        {question: "○○은 대통령 직선제 개헌을 이루어냈다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["6월 민주 항쟁이 전개되었다.", "5·18 광주 민주화 운동이 일어났다.", "유신 체제가 수립되었다.", "제1차 경제 개발 5개년 계획이 실시되었다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 6월 민주 항쟁이 전개되었다.\n이유: 6월 민주 항쟁의 결과로 대통령 직선제 개헌이 이루어졌다.\n② 1980년, ③ 박정희, ④ 박정희, ⑤ 6·25 전쟁의 사실이다."},
+        {question: "△△은 지방 자치 단체장 선거를 실시하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["경제 협력 개발 기구(OECD)에 가입하였다.", "외환 위기를 극복하였다.", "G20 정상 회의를 개최하였다.", "새마을 운동이 시작되었다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 경제 협력 개발 기구(OECD)에 가입하였다.\n이유: 지방자치단체장 선거와 OECD 가입은 모두 김영삼 정부 시기의 사실이다.\n② 김대중, ③ 이명박, ④ 박정희, ⑤ 6·25 전쟁의 사실이다."},
+        {question: "○○은 외환 위기를 극복하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["국민의 정부를 수립하였다.", "지방 자치 단체장 선거를 실시하였다.", "제1차 경제 개발 5개년 계획을 실시하였다.", "6월 민주 항쟁이 전개되었다.", "인천 상륙 작전이 전개되었다."], answer: 0, explanation: "정답: ① 국민의 정부를 수립하였다.\n이유: 외환 위기 극복과 국민의 정부는 모두 김대중 정부 시기의 사실이다.\n② 김영삼, ③ 박정희, ④ 1987년, ⑤ 6·25 전쟁의 사실이다."}
+      ]
+    };
 
     let questions = [];
     let currentIndex = 0;
     let score = 0;
     let timerInterval = null;
-    let timeLeft = TIME_LIMIT;
+    let timeLeft = 0;
+    let totalQuestions = 20;
     let answered = false;
-    let isReviewing = false;
+    let answeredCount = 0;
 
     function checkPassword() {
       const input = document.getElementById("password").value;
       if (input === PASSWORD) {
         document.getElementById("login-screen").classList.add("hidden");
-        document.getElementById("quiz-screen").classList.remove("hidden");
-        startQuiz();
+        document.getElementById("menu-screen").classList.remove("hidden");
       } else {
         document.getElementById("error-msg").textContent = "비밀번호가 틀렸습니다.";
       }
@@ -313,10 +260,23 @@
       return arr;
     }
 
-    function startQuiz() {
-      const shuffled = shuffle(allQuestions);
-      questions = shuffled.slice(0, TOTAL_QUESTIONS);
-      
+    function startQuiz(category, count, minutes) {
+      totalQuestions = count;
+      timeLeft = minutes * 60;
+      answeredCount = 0;
+      currentIndex = 0;
+      score = 0;
+
+      let pool = [];
+      if (category === "all") {
+        Object.values(questionBank).forEach(arr => pool.push(...arr));
+      } else {
+        pool = [...questionBank[category]];
+      }
+
+      const shuffled = shuffle(pool);
+      questions = shuffled.slice(0, Math.min(count, shuffled.length));
+
       questions = questions.map(q => {
         const optionsWithIndex = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.answer }));
         const shuffledOpts = shuffle(optionsWithIndex);
@@ -325,14 +285,13 @@
           question: q.question,
           options: shuffledOpts.map(item => item.opt),
           answer: newAnswer,
-          explanation: q.explanation
+          explanation: q.explanation,
+          userAnswer: null
         };
       });
 
-      currentIndex = 0;
-      score = 0;
-      timeLeft = TIME_LIMIT;
-      isReviewing = false;
+      document.getElementById("menu-screen").classList.add("hidden");
+      document.getElementById("quiz-screen").classList.remove("hidden");
       startTimer();
       showQuestion();
     }
@@ -367,7 +326,7 @@
     function showQuestion() {
       answered = false;
       const q = questions[currentIndex];
-      document.getElementById("progress").textContent = `${currentIndex + 1} / ${TOTAL_QUESTIONS}`;
+      document.getElementById("progress").textContent = `${currentIndex + 1} / ${totalQuestions}`;
       document.getElementById("score-display").textContent = `점수: ${score}`;
       document.getElementById("question").innerHTML = q.question.replace(/\n/g, "<br>");
       
@@ -389,8 +348,10 @@
       if (answered) return;
       answered = true;
       pauseTimer();
+      answeredCount++;
 
       const q = questions[currentIndex];
+      q.userAnswer = selected;
       const options = document.querySelectorAll(".option");
 
       options.forEach((opt, idx) => {
@@ -412,7 +373,9 @@
 
     function nextQuestion() {
       currentIndex++;
-      if (currentIndex < TOTAL_QUESTIONS) {
+      if (currentIndex < totalQuestions) {
+        // 다음 문제 시작 시 바로 1초 깎기
+        if (timeLeft > 0) timeLeft--;
         startTimer();
         showQuestion();
       } else {
@@ -420,14 +383,20 @@
       }
     }
 
-    function finishQuiz(timeOver) {
+    function giveUp() {
+      pauseTimer();
+      finishQuiz(false, true);
+    }
+
+    function finishQuiz(timeOver, isGiveUp = false) {
       pauseTimer();
       document.getElementById("quiz-screen").classList.add("hidden");
       document.getElementById("result-screen").classList.remove("hidden");
       
-      const percent = Math.round((score / TOTAL_QUESTIONS) * 100);
-      let msg = `${score} / ${TOTAL_QUESTIONS} (${percent}점)`;
+      const percent = answeredCount > 0 ? Math.round((score / answeredCount) * 100) : 0;
+      let msg = `${score} / ${answeredCount} (${percent}점)`;
       if (timeOver) msg += "<br><br>시간 초과로 종료되었습니다.";
+      if (isGiveUp) msg += "<br><br>포기하여 종료되었습니다.";
       document.getElementById("final-score").innerHTML = msg;
 
       const min = Math.floor(timeLeft / 60);
@@ -436,7 +405,7 @@
 
       const reviewList = document.getElementById("review-list");
       reviewList.innerHTML = "";
-      questions.forEach((q, idx) => {
+      questions.slice(0, answeredCount).forEach((q, idx) => {
         const item = document.createElement("div");
         item.className = "review-item";
         const correctOpt = q.options[q.answer];
@@ -447,12 +416,11 @@
     }
 
     function showReview(idx) {
-      isReviewing = true;
       document.getElementById("result-screen").classList.add("hidden");
       document.getElementById("review-screen").classList.remove("hidden");
 
       const q = questions[idx];
-      document.getElementById("review-progress").textContent = `${idx+1} / ${TOTAL_QUESTIONS}`;
+      document.getElementById("review-progress").textContent = `${idx+1} / ${answeredCount}`;
       document.getElementById("review-question").innerHTML = q.question.replace(/\n/g, "<br>");
 
       const optionsDiv = document.getElementById("review-options");
@@ -462,6 +430,7 @@
         div.className = "option disabled";
         div.textContent = `${["①","②","③","④","⑤"][i]} ${opt}`;
         if (i === q.answer) div.classList.add("correct");
+        if (q.userAnswer !== null && i === q.userAnswer && i !== q.answer) div.classList.add("wrong");
         optionsDiv.appendChild(div);
       });
 
@@ -473,17 +442,17 @@
       document.getElementById("result-screen").classList.remove("hidden");
     }
 
-    function restartQuiz() {
+    function goToMenu() {
       document.getElementById("result-screen").classList.add("hidden");
       document.getElementById("review-screen").classList.add("hidden");
-      document.getElementById("quiz-screen").classList.remove("hidden");
-      startQuiz();
+      document.getElementById("menu-screen").classList.remove("hidden");
     }
 
     function logout() {
       pauseTimer();
       document.getElementById("result-screen").classList.add("hidden");
       document.getElementById("review-screen").classList.add("hidden");
+      document.getElementById("menu-screen").classList.add("hidden");
       document.getElementById("login-screen").classList.remove("hidden");
       document.getElementById("password").value = "";
       document.getElementById("error-msg").textContent = "";
