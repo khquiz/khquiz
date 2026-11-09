@@ -324,7 +324,7 @@
         {question: "△△은 규장각을 육성하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["위화도 회군을 단행하였다.", "대동법을 시행하였다.", "경국대전을 완성하였다.", "노비안검법을 실시하였다.", "전민변정도감을 설치하였다."], answer: 0, explanation: "정답: ① 위화도 회군을 단행하였다.\n이유: 규장각과 위화도 회군은 모두 조선의 사실이다.\n④⑤ 고려의 사실이다."},
         {question: "○○은 훈민정음을 창제하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["경국대전을 완성하였다.", "대동법을 시행하였다.", "규장각을 육성하였다.", "위화도 회군을 단행하였다.", "노비안검법을 실시하였다."], answer: 0, explanation: "정답: ① 경국대전을 완성하였다.\n이유: 훈민정음과 경국대전은 모두 조선의 사실이다.\n⑤ 고려의 사실이다."},
         {question: "△△은 사림을 등용하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["붕당정치가 전개되었다.", "경국대전을 완성하였다.", "대동법을 시행하였다.", "규장각을 육성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 붕당정치가 전개되었다.\n이유: 사림을 등용하여 붕당정치가 전개되었다.\n②③④⑤ 조선의 다른 시기의 사실이다."},
-        {question: "○○은 붕당정치를 전개하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["사림이 등용되었다.", "경국대전을 완성하였다.", "대동법을 시행하였다.", "규장각을 육성하였다.", "위화도 회군을 단행되었다."], answer: 0, explanation: "정답: ① 사림이 등용되었다.\n이유: 붕당정치로 사림이 등용되었다.\n②③④⑤ 조선의 다른 시기의 사실이다."},
+        {question: "○○은 붕당정치를 전개하였다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["사림이 등용되었다.", "경국대전을 완성하였다.", "대동법을 시행하였다.", "규장각을 육성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 사림이 등용되었다.\n이유: 붕당정치로 사림이 등용되었다.\n②③④⑤ 조선의 다른 시기의 사실이다."},
         {question: "△△은 탕평책을 실시하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["붕당정치가 완화되었다.", "경국대전을 완성하였다.", "대동법을 시행하였다.", "규장각을 육성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 붕당정치가 완화되었다.\n이유: 탕평책으로 붕당정치가 완화되었다.\n②③④⑤ 조선의 다른 시기의 사실이다."},
         {question: "○○은 실학을 발전시켰다.\n○○이 살았던 시기에 있었던 일로 적절한 것은?", options: ["정약용이 활동하였다.", "경국대전을 완성하였다.", "대동법을 시행하였다.", "규장각을 육성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 정약용이 활동하였다.\n이유: 실학 발전으로 정약용이 활동하였다.\n②③④⑤ 조선의 다른 시기의 사실이다."},
         {question: "△△은 세도정치를 행하였다.\n△△이 살았던 시기에 있었던 일로 적절한 것은?", options: ["안동 김씨가 권력을 장악하였다.", "경국대전을 완성하였다.", "대동법을 시행하였다.", "규장각을 육성하였다.", "위화도 회군을 단행하였다."], answer: 0, explanation: "정답: ① 안동 김씨가 권력을 장악하였다.\n이유: 세도정치로 안동 김씨가 권력을 장악하였다.\n②③④⑤ 조선의 다른 시기의 사실이다."},
@@ -476,14 +476,27 @@
       questions = shuffled.slice(0, Math.min(count, shuffled.length));
 
       questions = questions.map(q => {
-        const optionsWithIndex = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.answer }));
+        const optionsWithIndex = q.options.map((opt, idx) => ({ opt, isCorrect: idx === q.answer, originalIndex: idx }));
         const shuffledOpts = shuffle(optionsWithIndex);
         const newAnswer = shuffledOpts.findIndex(item => item.isCorrect);
+        
+        // 해설 번호를 새로운 선지 번호에 맞게 재작성
+        const numMap = ["①","②","③","④","⑤"];
+        let newExplanation = q.explanation;
+        shuffledOpts.forEach((item, newIdx) => {
+          const oldNum = numMap[item.originalIndex];
+          const newNum = numMap[newIdx];
+          newExplanation = newExplanation.replace(new RegExp(oldNum, "g"), "TEMP" + newIdx);
+        });
+        shuffledOpts.forEach((item, newIdx) => {
+          newExplanation = newExplanation.replace(new RegExp("TEMP" + newIdx, "g"), numMap[newIdx]);
+        });
+
         return {
           question: q.question,
           options: shuffledOpts.map(item => item.opt),
           answer: newAnswer,
-          explanation: q.explanation,
+          explanation: newExplanation,
           userAnswer: null
         };
       });
